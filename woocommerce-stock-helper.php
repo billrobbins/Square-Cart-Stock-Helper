@@ -109,8 +109,8 @@ class WC_Square_Cart_Stock_Checker {
 			$log_entry .= $e->getMessage();
 		}
 
-		$square_settings = wc_square();
-		$logging_enabled = $square_settings->get_settings_handler()->is_debug_enabled();
+		// Log details only if Square debug logging is enabled
+		$logging_enabled = wc_square()->get_settings_handler()->is_debug_enabled();
 
 		if ( $logging_enabled ) {
 			WC_Square_Cart_Stock_Checker::log( $log_entry );
