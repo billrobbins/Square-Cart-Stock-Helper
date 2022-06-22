@@ -36,7 +36,7 @@ function ijab_square_add_to_cart_stock_check() {
 	$product = wc_get_product( $last_product_id );
 	$product_parent = $product->get_parent_id();
 
-	if ( $product_parent == 0 ) {
+	if ( $product_parent === 0 ) {
 		$sync_id = $last_product_id;
 	} else {
 		$sync_id = $product_parent;
@@ -66,11 +66,10 @@ class WC_Square_Cart_Stock_Checker {
 	 * @version 1.0.0
 	 */
 	public function sync_single_product( $product_id ) {
-		WC_Square_Cart_Stock_Checker::log( 'Attempting to sync inventory of single product.' );
+
+		$log_entry = 'Attempting to sync inventory of single product ID: ' . $product_id . PHP_EOL;
 
 		try {
-
-			WC_Square_Cart_Stock_Checker::log( 'Product ID submitted: '. $product_id );
 
 			$product = wc_get_product( $product_id );
 
@@ -78,10 +77,10 @@ class WC_Square_Cart_Stock_Checker {
 			$square_item_variation_id = get_post_meta( $product_id, '_square_item_variation_id', true ) ?: null;
 
 			if ( null === $square_item_variation_id ) {
-				WC_Square_Cart_Stock_Checker::log( $product_id .' does not have a _square_item_variation_id set.' );
-				throw new Exception( 'Product ID: '. $product_id .' does not have a _square_item_variation_id set.' );
+				$log_entry .= 'No _square_item_variation_id set.' . PHP_EOL;
+				throw new Exception( 'Product ID: '. $product_id .' does not have a _square_item_variation_id set. \n' );
 			} else {
-				WC_Square_Cart_Stock_Checker::log( $product_id .' has _square_item_variation_id:'. $square_item_variation_id );
+				$log_entry .= '_square_item_variation_id: '. $square_item_variation_id . PHP_EOL;
 			}
 
 			// Set the args.
@@ -91,26 +90,32 @@ class WC_Square_Cart_Stock_Checker {
 			];
 
 			// Query the inventory from Square for the product.
-			//WC_Square_Cart_Stock_Checker::log( 'Querying batch_retrieve_inventory_counts with args:'."\n". print_r( $args, true ) );
 			$response = wc_square()->get_api()->batch_retrieve_inventory_counts( $args );
-			//WC_Square_Cart_Stock_Checker::log( 'Response received:'."\n". print_r( $response, true ) );
 
 			foreach ( $response->get_counts() as $count ) {
 
 				// Square can return multiple "types" of counts, WooCommerce only distinguishes whether a product is in stock or not
 				if ( 'IN_STOCK' === $count->getState() ) {
 
+					$log_entry .= 'Quantity updated from ' . $product->get_stock_quantity();
 					$product->set_stock_quantity( $count->getQuantity() );
 					$product->save();
-					WC_Square_Cart_Stock_Checker::log( $product_id .' inventory count updated to: '. $count->getQuantity() );
+					$log_entry .= ' to '. $count->getQuantity() . PHP_EOL;
 
 				}
 			}
 
 		} catch ( Exception $e ) {
-			WC_Square_Cart_Stock_Checker::log( $e->getMessage() );
-			return;
+			$log_entry .= $e->getMessage();
 		}
+
+		$square_settings = wc_square();
+		$logging_enabled = $square_settings->get_settings_handler()->is_debug_enabled();
+
+		if ( $logging_enabled ) {
+			WC_Square_Cart_Stock_Checker::log( $log_entry );
+		}
+
 	}
 
 	static function log( $message = '' ) {
