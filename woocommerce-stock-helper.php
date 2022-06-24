@@ -35,12 +35,7 @@ function ijab_square_add_to_cart_stock_check() {
 	// We need the variation ID to sync but first we need to check its parent to see if it should sync
 	$product = wc_get_product( $last_product_id );
 	$product_parent = $product->get_parent_id();
-
-	if ( $product_parent === 0 ) {
-		$sync_id = $last_product_id;
-	} else {
-		$sync_id = $product_parent;
-	}
+	$sync_id = $product_parent === 0 ? $last_product_id : $product_parent;
 
 	// Only fetch stock levels if product is synced with Square
 	$terms = wp_get_post_terms( $sync_id, 'wc_square_synced', [ 'fields' => 'names' ] );
